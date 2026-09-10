@@ -146,7 +146,7 @@
       <option value="41bd">41 Business District</option>
     </select>
     <button class="btn-search" onclick="searchUnit()">Search</button>
-    <button class="btn-preview" onclick="previewOffer()">👁️ Preview & Click Map</button>
+    <button class="btn-preview" onclick="previewOffer()">👁️ Preview</button>
     <button class="btn-pdf" onclick="exportPDF()">📥 Download PDF</button>
     <div id="status" class="status">🔄 Loading live sheet data...</div>
   </div>
@@ -167,24 +167,24 @@
 
     <div class="offer-page-landscape" id="page-landscape">
       <div class="masterplan-header">
-        <h3 style="margin: 0; color: #333;">Masterplan Layout</h3>
+        <h3 style="margin: 0; color: #333;">Masterplan Layout <span style="font-size: 12px; color: #e63946; font-weight: normal;">(Click map to fix/save building location)</span></h3>
         <small id="currentProjectLabel" style="color: #666; font-weight: bold;"></small>
       </div>
       
       <div class="masterplan-section" id="masterplanContainer">
-        <img src="https://via.placeholder.com/800x600?text=Select+Project+or+Unit" alt="Masterplan Image" class="masterplan-img" id="mpImg" crossorigin="anonymous">
+        <img src="https://via.placeholder.com/800x600?text=Select+Project+or+Unit" alt="Masterplan Image" class="masterplan-img" id="mpImg" crossorigin="anonymous" onclick="handleMapClick(event, false)">
         <div id="marker" class="unit-marker">📍</div>
       </div>
     </div>
 
     <div class="offer-page-masyaf-portrait" id="page-masyaf-portrait" style="display: none;">
       <div class="masterplan-header">
-        <h3 style="margin: 0; color: #333;">Masyaf Masterplan Layout</h3>
+        <h3 style="margin: 0; color: #333;">Masyaf Masterplan Layout <span style="font-size: 12px; color: #e63946; font-weight: normal;">(Click map to fix/save building location)</span></h3>
         <small style="color: #666; font-weight: bold;">Project: Masyaf</small>
       </div>
       
       <div class="masterplan-section">
-        <img src="" alt="Masyaf Masterplan" class="masterplan-img" id="mpMasyafImg" crossorigin="anonymous">
+        <img src="" alt="Masyaf Masterplan" class="masterplan-img" id="mpMasyafImg" crossorigin="anonymous" onclick="handleMapClick(event, true)">
         <div id="markerMasyaf" class="unit-marker">📍</div>
       </div>
     </div>
@@ -201,6 +201,7 @@
     };
 
     let liveUnitsData = {};
+    let currentLoadedBuildingKey = "";
 
     function cleanValue(headerName, val) {
       if (val === undefined || val === null || String(val).trim() === '') return '-';
@@ -213,51 +214,65 @@
       return cleanVal;
     }
 
-    // Smart Grid Engine: محرك شبكي ذكي يحسب مكان العمارة تلقائياً من الأكواد وبشكل خطي منظم
-    function getUnitLocation(unitCode, projectName) {
+    // استخراج كود المبنى الأساسي (مثلاً لو الشقة A6A102 يرجعلك A6 أو A6A)
+    function extractBuildingKey(unitCode) {
       const code = unitCode.trim().toUpperCase();
-      const pLower = (projectName || '').toLowerCase();
+      // لو كود مثل A6A102 -> نأخذ أول مقطع دلالي
+      const match31 = code.match(/^([A-Z]+\d+[A-Z]?)/);
+      if (match31) return match31[1];
       
-      let zoneLetter = "A";
-      let buildingNum = 1;
-
-      // 1. تحليل كود 31 West (مثال: A6A102 -> الحرف A، الرقم 6)
-      if (pLower.includes('31') || code.match(/^[A-Z]\d+[A-Z]/)) {
-        const match = code.match(/^([A-Z]+)(\d+)([A-Z]?)/);
-        if (match) {
-          zoneLetter = match[1];
-          buildingNum = parseInt(match[2], 10) || 1;
-        }
-      } 
-      // 2. تحليل كود Mist (مثال: A1-1-101 -> الحرف A، الرقم 1)
-      else if (pLower.includes('mist') || code.includes('-')) {
+      // لو كود مثل A1-1-101 -> نأخذ A1-1
+      if (code.includes('-')) {
         const parts = code.split('-');
-        if (parts.length >= 2) {
-          zoneLetter = parts[0].replace(/\d+/g, '');
-          buildingNum = parseInt(parts[1], 10) || 1;
-        }
+        if (parts.length >= 2) return parts[0] + '-' + parts[1];
       }
-      // 3. تحليل كود Masyaf (مثال: L011C202 -> الحرف L، الرقم 11)
-      else if (pLower.includes('masyaf') || code.startsWith('L')) {
-        const match = code.match(/L(\d+)/);
-        if (match) {
-          zoneLetter = "L";
-          buildingNum = parseInt(match[1], 10) || 1;
-        }
-      }
-
-      // محاكاة إحداثيات مصفوفة منتظمة (Grid Matrix) متناسبة مع أبعاد الماستربلان
-      let charCode = zoneLetter.charCodeAt(0) || 65;
       
-      // توزيع ديناميكي ذكي يمنع خروج الدبوس عن إطار الصورة ويحافظ على تسلسل العمارات
-      let x = 20 + ((charCode - 65) * 15) + ((buildingNum % 5) * 3);
-      let y = 25 + (Math.floor(buildingNum / 5) * 12) + ((buildingNum * 3) % 10);
+      // لو كود مثل L011C202 -> نأخذ L11 أو L011
+      const matchMasyaf = code.match(/(L\d+)/);
+      if (matchMasyaf) return matchMasyaf[1];
 
-      // تأمين الحدود داخل المساحة المرئية بنسب مئوية دقيقة
-      x = Math.min(Math.max(x, 10), 88);
-      y = Math.min(Math.max(y, 10), 88);
+      return code.substring(0, 4); // افتراضي أول 4 حروف
+    }
 
-      return { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
+    // استرجاع الإحداثيات المحفوظة محلياً أو تخمينها مبدئياً
+    function getUnitLocation(unitCode, projectName) {
+      currentLoadedBuildingKey = extractBuildingKey(unitCode);
+      const savedLocations = JSON.parse(localStorage.getItem('m2_saved_locations') || '{}');
+
+      if (savedLocations[currentLoadedBuildingKey]) {
+        return savedLocations[currentLoadedBuildingKey];
+      }
+
+      // إحداثيات افتراضية لو أول مرة نشوف المبنى ده
+      return { x: 50, y: 50 };
+    }
+
+    // دالة السحر: لما تدوس على الماستربلان، بيلقط المكان الجديد ويسجله للمبنى ده للأبد!
+    function handleMapClick(event, isMasyaf) {
+      if (!currentLoadedBuildingKey) {
+        alert("Please search for a unit first before clicking on the map!");
+        return;
+      }
+
+      const rect = event.target.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 100;
+      const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+      const coords = { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
+
+      // حفظ الإحداثيات في ذاكرة المتصفح للأبد
+      let savedLocations = JSON.parse(localStorage.getItem('m2_saved_locations') || '{}');
+      savedLocations[currentLoadedBuildingKey] = coords;
+      localStorage.setItem('m2_saved_locations', JSON.stringify(savedLocations));
+
+      // تحريك الدبوس فوراً للمكان الجديد
+      const marker = isMasyaf ? document.getElementById('markerMasyaf') : document.getElementById('marker');
+      marker.style.left = `${coords.x}%`;
+      marker.style.top = `${coords.y}%`;
+      marker.style.transform = 'translate(-50%, -50%) scale(1.1)';
+
+      document.getElementById('status').style.color = "purple";
+      document.getElementById('status').innerText = `✨ Saved! Building [${currentLoadedBuildingKey}] pinned permanently at (${coords.x}%, ${coords.y}%)`;
     }
 
     function loadSheetData() {
@@ -408,7 +423,7 @@
         }
 
         st.style.color = "green";
-        st.innerText = `✅ Found Unit in [${projName}] & Mapped Automatically!`;
+        st.innerText = `✅ Found Unit in [${projName}] (Building: ${currentLoadedBuildingKey})`;
       } else {
         st.style.color = "red";
         st.innerText = `❌ Unit '${val}' Not Found`;
@@ -482,7 +497,7 @@
         st.innerText = "✅ PDF Downloaded Successfully!";
       }).catch(err => {
         console.error(err);
-        st.style.color = "red";
+        st.style.color.red;
         st.innerText = "❌ Download failed.";
       });
     }
