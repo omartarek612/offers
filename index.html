@@ -109,25 +109,39 @@
       cursor: crosshair;
     }
     
-    /* تعديل شكل الماركر لمستطيل شفاف بلون أحمر وعليه اسم الوحدة */
-    .unit-marker {
+    /* تصميم Pin أنيق ولذيذ ومش ضخم وشفافة بلون أحمر */
+    .unit-pin-marker {
       position: absolute;
-      padding: 4px 8px;
-      background: rgba(230, 57, 70, 0.25); /* أحمر شفاف */
-      border: 2px solid #e63946; /* حدود حمراء واضحة */
-      border-radius: 4px;
-      box-shadow: 0 0 10px rgba(230, 57, 70, 0.5);
+      padding: 3px 10px;
+      background: rgba(230, 57, 70, 0.2); /* أحمر شفاف ولذيذ */
+      border: 2px solid #e63946;
+      border-radius: 20px; /* شكل كبسولة أنيق */
+      box-shadow: 0 3px 10px rgba(230, 57, 70, 0.4);
       pointer-events: none;
-      display: none; /* مخفي لحد ما نبحث */
+      display: none;
       align-items: center;
       justify-content: center;
       color: #fff;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 11px;
       white-space: nowrap;
       z-index: 10;
-      transform: translate(-50%, -50%);
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      transform: translate(-50%, -100%); /* عشان نقطة التثقيب تكون في أسفل الـ Pin بالضبط على المكان اللي دزت عليه */
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+    }
+    
+    /* إضافة رأس دبوس صغير تحت الكبسولة عشان تدي شكل Location Pin حقيقي */
+    .unit-pin-marker::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px 5px 0 5px;
+      border-style: solid;
+      border-color: #e63946 transparent;
+      display: block;
+      width: 0;
     }
 
     .status { margin-top: 10px; font-size: 14px; font-weight: bold; }
@@ -174,7 +188,7 @@
       
       <div class="masterplan-section" id="masterplanContainer">
         <img src="https://via.placeholder.com/800x600?text=Select+Project+or+Unit" alt="Masterplan Image" class="masterplan-img" id="mpImg" crossorigin="anonymous" onclick="handleMapClick(event, false)">
-        <div id="marker" class="unit-marker"></div>
+        <div id="marker" class="unit-pin-marker"></div>
       </div>
     </div>
 
@@ -186,7 +200,7 @@
       
       <div class="masterplan-section">
         <img src="" alt="Masyaf Masterplan" class="masterplan-img" id="mpMasyafImg" crossorigin="anonymous" onclick="handleMapClick(event, true)">
-        <div id="markerMasyaf" class="unit-marker"></div>
+        <div id="markerMasyaf" class="unit-pin-marker"></div>
       </div>
     </div>
   </div>
@@ -456,7 +470,8 @@
             .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
             .masterplan-img { width: 100%; height: 100%; display: block; object-fit: contain; }
-            .unit-marker { position: absolute; padding: 4px 8px; background: rgba(230, 57, 70, 0.25); border: 2px solid #e63946; border-radius: 4px; box-shadow: 0 0 10px rgba(230, 57, 70, 0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 12px; white-space: nowrap; z-index: 10; transform: translate(-50%, -50%); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+            .unit-pin-marker { position: absolute; padding: 3px 10px; background: rgba(230, 57, 70, 0.2); border: 2px solid #e63946; border-radius: 20px; box-shadow: 0 3px 10px rgba(230, 57, 70, 0.4); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 11px; white-space: nowrap; z-index: 10; transform: translate(-50%, -100%); text-shadow: 1px 1px 2px rgba(0,0,0,0.9); }
+            .unit-pin-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 5px 0 5px; border-style: solid; border-color: #e63946 transparent; display: block; width: 0; }
           </style>
         </head>
         <body>
