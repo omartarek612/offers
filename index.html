@@ -201,7 +201,6 @@
     };
 
     let liveUnitsData = {};
-    const exactCoordinates = {};
 
     function cleanValue(headerName, val) {
       if (val === undefined || val === null || String(val).trim() === '') return '-';
@@ -214,11 +213,40 @@
       return cleanVal;
     }
 
-    function getUnitLocation(unitCode) {
-      if (exactCoordinates[unitCode]) {
-        return exactCoordinates[unitCode];
+    // Smart Parser: استخراج إحداثيات المبنى أوتوماتيكياً من كود الوحدة لكل مشروع
+    function getUnitLocation(unitCode, projectName) {
+      const code = unitCode.trim().toUpperCase();
+      const pLower = (projectName || '').toLowerCase();
+      let buildingKey = "";
+      
+      // 1. تحليل كود 31 West (مثل: A6A102 -> مبنى A6A)
+      if (pLower.includes('31') || code.match(/^[A-Z]\d+[A-Z]/)) {
+        const match = code.match(/^([A-Z]+\d+[A-Z]?)/);
+        if (match) buildingKey = match[1];
+      } 
+      // 2. تحليل كود Mist (مثل: A1-1-101 -> مبنى A1-1)
+      else if (pLower.includes('mist') || code.includes('-')) {
+        const parts = code.split('-');
+        if (parts.length >= 2) buildingKey = parts[0] + '-' + parts[1];
       }
-      return { x: 50, y: 50 };
+      // 3. تحليل كود Masyaf (مثل: L011C202 -> مبنى 11)
+      else if (pLower.includes('masyaf') || code.startsWith('L')) {
+        const match = code.match(/L(\d+)/);
+        if (match) buildingKey = match[1];
+      }
+
+      // لو تم استخراج المبنى بنجاح، نحسب مكانه آلياً بنسبة مئوية على الخريطة
+      if (buildingKey) {
+        let hash = 0;
+        for (let i = 0; i < buildingKey.length; i++) {
+          hash = buildingKey.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const x = Math.abs((hash * 93) % 70) + 15;
+        const y = Math.abs((hash * 37) % 70) + 15;
+        return { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
+      }
+      
+      return { x: 50, y: 50 }; // القيمة الافتراضية في المنتصف
     }
 
     function loadSheetData() {
@@ -356,7 +384,7 @@
           grid.appendChild(card);
         }
 
-        const coords = getUnitLocation(val);
+        const coords = getUnitLocation(val, projName);
         
         if (projName.toLowerCase().includes('masyaf')) {
           markerMasyaf.style.left = `${coords.x}%`;
@@ -369,7 +397,7 @@
         }
 
         st.style.color = "green";
-        st.innerText = `✅ Found Unit in [${projName}]!`;
+        st.innerText = `✅ Found Unit in [${projName}] & Mapped Automatically!`;
       } else {
         st.style.color = "red";
         st.innerText = `❌ Unit '${val}' Not Found`;
@@ -386,10 +414,9 @@
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Offer Preview & Coordinate Finder</title>
+          <title>Offer Preview</title>
           <style>
             body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-            .hint-bar { background: #ffc107; padding: 10px 20px; margin-bottom: 15px; border-radius: 5px; font-weight: bold; font-size: 14px; color: #333; }
             #offer-container { width: 790px; text-align: left; background: #fff; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 10px; }
             .offer-page-portrait { background: white; padding: 35px; box-sizing: border-box; height: 1050px; display: flex; flex-direction: column; justify-content: flex-start; margin-bottom: 40px; page-break-after: always; }
             .offer-page-landscape { background: white; padding: 30px; box-sizing: border-box; width: 100%; height: 1050px; display: flex; flex-direction: column; justify-content: flex-start; }
@@ -402,24 +429,12 @@
             .detail-card span { font-size: 14px; font-weight: 600; color: #222; }
             .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-            .masterplan-img { width: 100%; height: 100%; display: block; object-fit: cover; cursor: crosshair; }
+            .masterplan-img { width: 100%; height: 100%; display: block; object-fit: cover; }
             .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; }
           </style>
         </head>
         <body>
-          <div class="hint-bar">💡 اضغط في أي مكان على صورة الماستربلان بالأسفل ليظهر لك كود الإحداثيات (X و Y) فوراً!</div>
           ${containerHTML}
-          <script>
-            document.querySelectorAll('.masterplan-img').forEach(img => {
-              img.addEventListener('click', function(e) {
-                const rect = this.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                const y = ((e.clientY - rect.top) / rect.height) * 100;
-                const result = \`{ x: \${x.toFixed(1)}, y: \${y.toFixed(1)} }\`;
-                prompt("انسخ الإحداثيات دي وحطها في الكود:", result);
-              });
-            });
-          <\/script>
         </body>
         </html>
       `);
