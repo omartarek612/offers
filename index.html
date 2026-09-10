@@ -109,23 +109,25 @@
       cursor: crosshair;
     }
     
+    /* تعديل شكل الماركر لمستطيل شفاف بلون أحمر وعليه اسم الوحدة */
     .unit-marker {
       position: absolute;
-      width: 36px;
-      height: 36px;
-      background: #e63946;
-      border: 3px solid #ffffff;
-      border-radius: 50%;
-      box-shadow: 0 0 15px rgba(230, 57, 70, 0.9);
+      padding: 4px 8px;
+      background: rgba(230, 57, 70, 0.25); /* أحمر شفاف */
+      border: 2px solid #e63946; /* حدود حمراء واضحة */
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(230, 57, 70, 0.5);
       pointer-events: none;
-      display: none; /* مخفي افتراضياً لحد ما نبحث */
+      display: none; /* مخفي لحد ما نبحث */
       align-items: center;
       justify-content: center;
-      color: white;
+      color: #fff;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 12px;
+      white-space: nowrap;
       z-index: 10;
       transform: translate(-50%, -50%);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     }
 
     .status { margin-top: 10px; font-size: 14px; font-weight: bold; }
@@ -172,7 +174,7 @@
       
       <div class="masterplan-section" id="masterplanContainer">
         <img src="https://via.placeholder.com/800x600?text=Select+Project+or+Unit" alt="Masterplan Image" class="masterplan-img" id="mpImg" crossorigin="anonymous" onclick="handleMapClick(event, false)">
-        <div id="marker" class="unit-marker">📍</div>
+        <div id="marker" class="unit-marker"></div>
       </div>
     </div>
 
@@ -184,7 +186,7 @@
       
       <div class="masterplan-section">
         <img src="" alt="Masyaf Masterplan" class="masterplan-img" id="mpMasyafImg" crossorigin="anonymous" onclick="handleMapClick(event, true)">
-        <div id="markerMasyaf" class="unit-marker">📍</div>
+        <div id="markerMasyaf" class="unit-marker"></div>
       </div>
     </div>
   </div>
@@ -258,7 +260,10 @@
       savedLocations[currentLoadedBuildingKey] = coords;
       localStorage.setItem('m2_saved_locations', JSON.stringify(savedLocations));
 
+      const unitVal = document.getElementById('unitInput').value.trim().toUpperCase();
       const marker = isMasyaf ? document.getElementById('markerMasyaf') : document.getElementById('marker');
+      
+      marker.innerText = unitVal;
       marker.style.display = 'flex';
       marker.style.left = `${coords.x}%`;
       marker.style.top = `${coords.y}%`;
@@ -408,10 +413,12 @@
         const coords = getUnitLocation(val, projName);
         
         if (projName.toLowerCase().includes('masyaf')) {
+          markerMasyaf.innerText = val;
           markerMasyaf.style.display = 'flex';
           markerMasyaf.style.left = `${coords.x}%`;
           markerMasyaf.style.top = `${coords.y}%`;
         } else {
+          marker.innerText = val;
           marker.style.display = 'flex';
           marker.style.left = `${coords.x}%`;
           marker.style.top = `${coords.y}%`;
@@ -449,7 +456,7 @@
             .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
             .masterplan-img { width: 100%; height: 100%; display: block; object-fit: contain; }
-            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; transform: translate(-50%, -50%); }
+            .unit-marker { position: absolute; padding: 4px 8px; background: rgba(230, 57, 70, 0.25); border: 2px solid #e63946; border-radius: 4px; box-shadow: 0 0 10px rgba(230, 57, 70, 0.5); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 12px; white-space: nowrap; z-index: 10; transform: translate(-50%, -50%); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
           </style>
         </head>
         <body>
