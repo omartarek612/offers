@@ -213,7 +213,7 @@
       return cleanVal;
     }
 
-    // Smart Algorithmic Parser: استخراج إحداثيات مكان المبنى رياضياً أوتوماتيكياً
+    // Smart Grid Engine: محرك شبكي ذكي يحسب مكان العمارة تلقائياً من الأكواد وبشكل خطي منظم
     function getUnitLocation(unitCode, projectName) {
       const code = unitCode.trim().toUpperCase();
       const pLower = (projectName || '').toLowerCase();
@@ -229,11 +229,11 @@
           buildingNum = parseInt(match[2], 10) || 1;
         }
       } 
-      // 2. تحليل كود Mist (مثال: A1-1-101 -> الجزء A1، الرقم 1)
+      // 2. تحليل كود Mist (مثال: A1-1-101 -> الحرف A، الرقم 1)
       else if (pLower.includes('mist') || code.includes('-')) {
         const parts = code.split('-');
         if (parts.length >= 2) {
-          zoneLetter = parts[0];
+          zoneLetter = parts[0].replace(/\d+/g, '');
           buildingNum = parseInt(parts[1], 10) || 1;
         }
       }
@@ -246,13 +246,16 @@
         }
       }
 
-      // حساب إحداثيات نسبية منتظمة (X و Y) بناءً على الحرف ورقم المبنى
+      // محاكاة إحداثيات مصفوفة منتظمة (Grid Matrix) متناسبة مع أبعاد الماستربلان
       let charCode = zoneLetter.charCodeAt(0) || 65;
-      let calculatedX = 20 + ((charCode - 65) * 12) % 65;
-      let calculatedY = 20 + (buildingNum * 6) % 65;
+      
+      // توزيع ديناميكي ذكي يمنع خروج الدبوس عن إطار الصورة ويحافظ على تسلسل العمارات
+      let x = 20 + ((charCode - 65) * 15) + ((buildingNum % 5) * 3);
+      let y = 25 + (Math.floor(buildingNum / 5) * 12) + ((buildingNum * 3) % 10);
 
-      const x = Math.min(Math.max(calculatedX, 10), 90);
-      const y = Math.min(Math.max(calculatedY, 10), 90);
+      // تأمين الحدود داخل المساحة المرئية بنسب مئوية دقيقة
+      x = Math.min(Math.max(x, 10), 88);
+      y = Math.min(Math.max(y, 10), 88);
 
       return { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
     }
