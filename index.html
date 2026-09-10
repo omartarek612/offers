@@ -116,17 +116,16 @@
       background: #e63946;
       border: 3px solid #ffffff;
       border-radius: 50%;
-      transform: translate(-50%, -50%) scale(0);
       box-shadow: 0 0 15px rgba(230, 57, 70, 0.9);
-      transition: transform 0.2s ease;
       pointer-events: none;
-      display: flex;
+      display: none; /* مخفي افتراضياً لحد ما نبحث */
       align-items: center;
       justify-content: center;
       color: white;
       font-weight: bold;
       font-size: 14px;
       z-index: 10;
+      transform: translate(-50%, -50%);
     }
 
     .status { margin-top: 10px; font-size: 14px; font-weight: bold; }
@@ -250,7 +249,6 @@
       const img = event.target;
       const rect = img.getBoundingClientRect();
       
-      // حساب الإحداثيات بالنسبة للصورة الفعلية بدقة تامة
       const x = ((event.clientX - rect.left) / rect.width) * 100;
       const y = ((event.clientY - rect.top) / rect.height) * 100;
 
@@ -261,9 +259,9 @@
       localStorage.setItem('m2_saved_locations', JSON.stringify(savedLocations));
 
       const marker = isMasyaf ? document.getElementById('markerMasyaf') : document.getElementById('marker');
+      marker.style.display = 'flex';
       marker.style.left = `${coords.x}%`;
       marker.style.top = `${coords.y}%`;
-      marker.style.transform = 'translate(-50%, -50%) scale(1.2)';
 
       document.getElementById('status').style.color = "purple";
       document.getElementById('status').innerText = `✨ Saved! Building [${currentLoadedBuildingKey}] pinned permanently at (${coords.x}%, ${coords.y}%)`;
@@ -378,6 +376,9 @@
 
       if (!val) return;
 
+      marker.style.display = 'none';
+      markerMasyaf.style.display = 'none';
+
       if (liveUnitsData[val]) {
         const uData = liveUnitsData[val];
         document.getElementById('uName').innerText = "Unit: " + val;
@@ -406,28 +407,21 @@
 
         const coords = getUnitLocation(val, projName);
         
-        // إظهار وتحريك الدبوس فوراً بناءً على الإحداثيات المحفوظة
-        setTimeout(() => {
-          if (projName.toLowerCase().includes('masyaf')) {
-            marker.style.transform = 'translate(-50%, -50%) scale(0)';
-            markerMasyaf.style.left = `${coords.x}%`;
-            markerMasyaf.style.top = `${coords.y}%`;
-            markerMasyaf.style.transform = 'translate(-50%, -50%) scale(1.2)';
-          } else {
-            markerMasyaf.style.transform = 'translate(-50%, -50%) scale(0)';
-            marker.style.left = `${coords.x}%`;
-            marker.style.top = `${coords.y}%`;
-            marker.style.transform = 'translate(-50%, -50%) scale(1.2)';
-          }
-        }, 100);
+        if (projName.toLowerCase().includes('masyaf')) {
+          markerMasyaf.style.display = 'flex';
+          markerMasyaf.style.left = `${coords.x}%`;
+          markerMasyaf.style.top = `${coords.y}%`;
+        } else {
+          marker.style.display = 'flex';
+          marker.style.left = `${coords.x}%`;
+          marker.style.top = `${coords.y}%`;
+        }
 
         st.style.color = "green";
         st.innerText = `✅ Found Unit in [${projName}] (Building: ${currentLoadedBuildingKey})`;
       } else {
         st.style.color = "red";
         st.innerText = `❌ Unit '${val}' Not Found`;
-        marker.style.transform = 'translate(-50%, -50%) scale(0)';
-        markerMasyaf.style.transform = 'translate(-50%, -50%) scale(0)';
       }
     }
 
@@ -455,7 +449,7 @@
             .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
             .masterplan-img { width: 100%; height: 100%; display: block; object-fit: contain; }
-            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; }
+            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; transform: translate(-50%, -50%); }
           </style>
         </head>
         <body>
