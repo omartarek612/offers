@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M Squared Interactive Offer System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
+    .controls { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 25px; display: inline-block; }
+    input, select { padding: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 5px; margin-right: 5px; outline: none; }
+    input[type="text"] { width: 150px; text-transform: uppercase; }
+    input#clientInput { text-transform: none; width: 170px; }
+    button { padding: 12px 18px; font-size: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 3px; }
+    .btn-search { background: #0066cc; color: white; }
+    .btn-preview { background: #ffc107; color: #333; }
+    .btn-pdf { background: #28a745; color: white; }
+
+    #offer-container {
+      width: 790px;
+      margin: auto;
+      text-align: left;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+
+    .offer-page-portrait { 
+      background: white; 
+      padding: 35px; 
+      box-sizing: border-box; 
+      height: 1050px; 
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      page-break-after: always;
+      break-after: page;
+      margin-bottom: 40px;
+    }
+
+    .offer-page-landscape {
+      background: white;
+      padding: 30px;
+      box-sizing: border-box;
+      width: 100%;
+      height: 1050px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .offer-page-masyaf-portrait {
+      background: white;
+      padding: 30px;
+      box-sizing: border-box;
+      width: 100%;
+      height: 1050px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0066cc; padding-bottom: 12px; margin-bottom: 15px; }
+    
+    .greeting-box {
+      display: none;
+      background: #eef6ff;
+      border-left: 4px solid #0066cc;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      color: #1a365d;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    .detail-card { background: #f8f9fa; padding: 12px 16px; border-radius: 6px; border-left: 3px solid #0066cc; }
+    .detail-card strong { display: block; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 3px; }
+    .detail-card span { font-size: 14px; font-weight: 600; color: #222; }
+
+    .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    
+    .masterplan-section { 
+      position: relative; 
+      width: 100%; 
+      flex-grow: 1; 
+      background: #e9ecef; 
+      border-radius: 8px; 
+      overflow: hidden; 
+      border: 2px solid #e2e8f0; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    
+    .masterplan-img { 
+      width: 100%; 
+      height: 100%; 
+      display: block; 
+      object-fit: cover; 
+      image-rendering: -webkit-optimize-contrast;
+      cursor: crosshair;
+    }
+    
+    .unit-marker {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      background: #e63946;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      box-shadow: 0 0 15px rgba(230, 57, 70, 0.9);
+      transition: all 0.3s ease;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+      z-index: 10;
+    }
+
+    .status { margin-top: 10px; font-size: 14px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <input type="text" id="unitInput" placeholder="Unit Code" onkeypress="if(event.key==='Enter') searchUnit()">
+    <input type="text" id="clientInput" placeholder="Client Name (Optional)">
+    <select id="projectSelect" onchange="changeMasterplanManual()">
+      <option value="auto">Auto Project Detection</option>
+      <option value="trio">Trio</option>
+      <option value="mist">Mist</option>
+      <option value="31west">31 West</option>
+      <option value="masyaf">Masyaf</option>
+      <option value="41bd">41 Business District</option>
+    </select>
+    <button class="btn-search" onclick="searchUnit()">Search</button>
+    <button class="btn-preview" onclick="previewOffer()">👁️ Preview & Click Map</button>
+    <button class="btn-pdf" onclick="exportPDF()">📥 Download PDF</button>
+    <div id="status" class="status">🔄 Loading live sheet data...</div>
+  </div>
+
+  <div id="offer-container">
+    <div class="offer-page-portrait" id="page-portrait">
+      <div class="header">
+        <div><h2 id="uName" style="margin: 0;">Unit Offer</h2></div>
+        <div><h3 id="uProjectDisplay" style="color:#0066cc; margin: 0;">M Squared</h3></div>
+      </div>
+
+      <div class="greeting-box" id="greetingBox"></div>
+
+      <div id="detailsGrid" class="details-grid">
+        <div class="detail-card"><strong>Status</strong><span>Search for a unit code...</span></div>
+      </div>
+    </div>
+
+    <div class="offer-page-landscape" id="page-landscape">
+      <div class="masterplan-header">
+        <h3 style="margin: 0; color: #333;">Masterplan Layout</h3>
+        <small id="currentProjectLabel" style="color: #666; font-weight: bold;"></small>
+      </div>
+      
+      <div class="masterplan-section" id="masterplanContainer">
+        <img src="https://via.placeholder.com/800x600?text=Select+Project+or+Unit" alt="Masterplan Image" class="masterplan-img" id="mpImg" crossorigin="anonymous">
+        <div id="marker" class="unit-marker">📍</div>
+      </div>
+    </div>
+
+    <div class="offer-page-masyaf-portrait" id="page-masyaf-portrait" style="display: none;">
+      <div class="masterplan-header">
+        <h3 style="margin: 0; color: #333;">Masyaf Masterplan Layout</h3>
+        <small style="color: #666; font-weight: bold;">Project: Masyaf</small>
+      </div>
+      
+      <div class="masterplan-section">
+        <img src="" alt="Masyaf Masterplan" class="masterplan-img" id="mpMasyafImg" crossorigin="anonymous">
+        <div id="markerMasyaf" class="unit-marker">📍</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyad2QsDEFmERn9ULIwMrA2PsYuyIhOgqGrRqP6rS8mjrbOGNqt0AC4w0umTDngPPoToEg/exec';
+
+    const projectImages = {
+      '31 west': 'https://lh3.googleusercontent.com/d/1662DtH5EuFk3bGzM5l5h_nLrHcICPVvd',
+      '31west': 'https://lh3.googleusercontent.com/d/1662DtH5EuFk3bGzM5l5h_nLrHcICPVvd',
+      'masyaf': 'https://lh3.googleusercontent.com/d/1h2XXNepqm__imD0DYTYsQAvJbH-73eQn',
+      'mist': 'https://lh3.googleusercontent.com/d/1GUJvoOMWh1KKW9tMMXhtqw8fuEHS_3rw'
+    };
+
+    let liveUnitsData = {};
+    const exactCoordinates = {};
+
+    function cleanValue(headerName, val) {
+      if (val === undefined || val === null || String(val).trim() === '') return '-';
+      let cleanVal = String(val).trim();
+      const hLower = headerName.toLowerCase();
+      if (hLower.includes('delivery') || hLower.includes('تسليم') || hLower.includes('date')) {
+        const match = cleanVal.match(/\b(20\d{2})\b/);
+        return match ? match[1] : cleanVal;
+      }
+      return cleanVal;
+    }
+
+    function getUnitLocation(unitCode) {
+      if (exactCoordinates[unitCode]) {
+        return exactCoordinates[unitCode];
+      }
+      return { x: 50, y: 50 };
+    }
+
+    function loadSheetData() {
+      const st = document.getElementById('status');
+      st.style.color = "blue";
+      st.innerText = "🔄 Connecting to Google Sheet...";
+
+      fetch(WEB_APP_URL, { redirect: "follow" })
+        .then(res => res.json())
+        .then(data => {
+          if (!data || data.length === 0) {
+            st.style.color = "orange";
+            st.innerText = "⚠️ Sheet is empty.";
+            return;
+          }
+
+          liveUnitsData = {};
+          data.forEach(row => {
+            let unitCodeKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('unit') || lower.includes('code') || lower.includes('كود') || lower.includes('وحدة');
+            });
+
+            if (!unitCodeKey) unitCodeKey = Object.keys(row)[0];
+
+            const rawCode = row[unitCodeKey];
+            const unitCode = String(rawCode || '').toUpperCase().trim();
+
+            if (!unitCode) return;
+
+            let projectKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('project') || lower.includes('مشروع') || lower.includes('phase');
+            });
+
+            let projName = projectKey && row[projectKey] ? String(row[projectKey]).trim() : 'M Squared';
+
+            let unitObj = {};
+            for (const [key, val] of Object.entries(row)) {
+              if (key !== unitCodeKey && key !== '') {
+                unitObj[key] = cleanValue(key, val);
+              }
+            }
+
+            unitObj['_projectName'] = projName;
+            liveUnitsData[unitCode] = unitObj;
+          });
+
+          const count = Object.keys(liveUnitsData).length;
+          if (count > 0) {
+            st.style.color = "green";
+            st.innerText = `✅ Loaded ${count} units successfully!`;
+          } else {
+            st.style.color = "orange";
+            st.innerText = "⚠️ No units found in sheet.";
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          st.style.color = "red";
+          st.innerText = "❌ Connection failed. Check deployment access.";
+        });
+    }
+
+    function setMasterplanImage(projectName) {
+      const pLower = (projectName || '').toLowerCase().trim();
+      const landscapePage = document.getElementById('page-landscape');
+      const masyafPortraitPage = document.getElementById('page-masyaf-portrait');
+      
+      const imgElem = document.getElementById('mpImg');
+      const masyafImgElem = document.getElementById('mpMasyafImg');
+      const label = document.getElementById('currentProjectLabel');
+
+      if (pLower.includes('masyaf')) {
+        landscapePage.style.display = 'none';
+        masyafPortraitPage.style.display = 'flex';
+        masyafImgElem.src = projectImages['masyaf'];
+      } else {
+        masyafPortraitPage.style.display = 'none';
+        landscapePage.style.display = 'flex';
+
+        let matchedImage = 'https://via.placeholder.com/800x600?text=M+Squared+Masterplan';
+        for (const key in projectImages) {
+          if (pLower.includes(key)) {
+            matchedImage = projectImages[key];
+            break;
+          }
+        }
+        imgElem.src = matchedImage;
+        label.innerText = `Project: ${projectName || 'M Squared'}`;
+      }
+    }
+
+    function changeMasterplanManual() {
+      const selected = document.getElementById('projectSelect').value;
+      if (selected !== 'auto') {
+        setMasterplanImage(selected);
+      }
+    }
+
+    function searchUnit() {
+      const val = document.getElementById('unitInput').value.trim().toUpperCase();
+      const clientName = document.getElementById('clientInput').value.trim();
+      const st = document.getElementById('status');
+      const grid = document.getElementById('detailsGrid');
+      const marker = document.getElementById('marker');
+      const markerMasyaf = document.getElementById('markerMasyaf');
+      const greetingBox = document.getElementById('greetingBox');
+
+      if (!val) return;
+
+      if (liveUnitsData[val]) {
+        const uData = liveUnitsData[val];
+        document.getElementById('uName').innerText = "Unit: " + val;
+        
+        const projName = uData['_projectName'] || 'M Squared';
+        document.getElementById('uProjectDisplay').innerText = projName;
+
+        if (clientName) {
+          greetingBox.style.display = 'block';
+          greetingBox.innerHTML = `Dear <strong>${clientName}</strong>,<br>Kindly find your offer details below.`;
+        } else {
+          greetingBox.style.display = 'none';
+          greetingBox.innerHTML = '';
+        }
+        
+        setMasterplanImage(projName);
+
+        grid.innerHTML = '';
+        for (const [key, value] of Object.entries(uData)) {
+          if (key.startsWith('_')) continue;
+          const card = document.createElement('div');
+          card.className = 'detail-card';
+          card.innerHTML = `<strong>${key}</strong><span>${value}</span>`;
+          grid.appendChild(card);
+        }
+
+        const coords = getUnitLocation(val);
+        
+        if (projName.toLowerCase().includes('masyaf')) {
+          markerMasyaf.style.left = `${coords.x}%`;
+          markerMasyaf.style.top = `${coords.y}%`;
+          markerMasyaf.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        } else {
+          marker.style.left = `${coords.x}%`;
+          marker.style.top = `${coords.y}%`;
+          marker.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        }
+
+        st.style.color = "green";
+        st.innerText = `✅ Found Unit in [${projName}]!`;
+      } else {
+        st.style.color = "red";
+        st.innerText = `❌ Unit '${val}' Not Found`;
+        marker.style.transform = 'translate(-50%, -50%) scale(0)';
+        markerMasyaf.style.transform = 'translate(-50%, -50%) scale(0)';
+      }
+    }
+
+    function previewOffer() {
+      const containerHTML = document.getElementById('offer-container').outerHTML;
+      const previewWindow = window.open('', '_blank', 'width=900,height=800');
+      
+      previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Offer Preview & Coordinate Finder</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+            .hint-bar { background: #ffc107; padding: 10px 20px; margin-bottom: 15px; border-radius: 5px; font-weight: bold; font-size: 14px; color: #333; }
+            #offer-container { width: 790px; text-align: left; background: #fff; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 10px; }
+            .offer-page-portrait { background: white; padding: 35px; box-sizing: border-box; height: 1050px; display: flex; flex-direction: column; justify-content: flex-start; margin-bottom: 40px; page-break-after: always; }
+            .offer-page-landscape { background: white; padding: 30px; box-sizing: border-box; width: 100%; height: 1050px; display: flex; flex-direction: column; justify-content: flex-start; }
+            .offer-page-masyaf-portrait { background: white; padding: 30px; box-sizing: border-box; width: 100%; height: 1050px; display: flex; flex-direction: column; justify-content: flex-start; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0066cc; padding-bottom: 12px; margin-bottom: 15px; }
+            .greeting-box { background: #eef6ff; border-left: 4px solid #0066cc; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; color: #1a365d; font-size: 15px; line-height: 1.4; }
+            .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+            .detail-card { background: #f8f9fa; padding: 12px 16px; border-radius: 6px; border-left: 3px solid #0066cc; }
+            .detail-card strong { display: block; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 3px; }
+            .detail-card span { font-size: 14px; font-weight: 600; color: #222; }
+            .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+            .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+            .masterplan-img { width: 100%; height: 100%; display: block; object-fit: cover; cursor: crosshair; }
+            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; }
+          </style>
+        </head>
+        <body>
+          <div class="hint-bar">💡 اضغط في أي مكان على صورة الماستربلان بالأسفل ليظهر لك كود الإحداثيات (X و Y) فوراً!</div>
+          ${containerHTML}
+          <script>
+            document.querySelectorAll('.masterplan-img').forEach(img => {
+              img.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                const result = \`{ x: \${x.toFixed(1)}, y: \${y.toFixed(1)} }\`;
+                prompt("انسخ الإحداثيات دي وحطها في الكود:", result);
+              });
+            });
+          <\/script>
+        </body>
+        </html>
+      `);
+      previewWindow.document.close();
+    }
+
+    function exportPDF() {
+      const container = document.getElementById('offer-container');
+      const unitNo = document.getElementById('unitInput').value.trim() || 'Unit';
+      const st = document.getElementById('status');
+
+      st.style.color = "blue";
+      st.innerText = "⏳ Generating PDF...";
+
+      const fileName = `Kindly_find_your_offer_Unit_${unitNo}.pdf`;
+
+      const opt = {
+        margin:       [0.1, 0.1, 0.1, 0.1],
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { 
+          scale: 4,                  
+          useCORS: true, 
+          allowTaint: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'] }
+      };
+
+      html2pdf().set(opt).from(container).save().then(() => {
+        st.style.color = "green";
+        st.innerText = "✅ PDF Downloaded Successfully!";
+      }).catch(err => {
+        console.error(err);
+        st.style.color = "red";
+        st.innerText = "❌ Download failed.";
+      });
+    }
+
+    loadSheetData();
+  </script>
+</body>
+</html>
