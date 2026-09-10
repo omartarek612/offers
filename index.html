@@ -104,7 +104,7 @@
       width: 100%; 
       height: 100%; 
       display: block; 
-      object-fit: cover; 
+      object-fit: contain; 
       image-rendering: -webkit-optimize-contrast;
       cursor: crosshair;
     }
@@ -118,7 +118,7 @@
       border-radius: 50%;
       transform: translate(-50%, -50%) scale(0);
       box-shadow: 0 0 15px rgba(230, 57, 70, 0.9);
-      transition: all 0.3s ease;
+      transition: transform 0.2s ease;
       pointer-events: none;
       display: flex;
       align-items: center;
@@ -214,27 +214,22 @@
       return cleanVal;
     }
 
-    // استخراج كود المبنى الأساسي (مثلاً لو الشقة A6A102 يرجعلك A6 أو A6A)
     function extractBuildingKey(unitCode) {
       const code = unitCode.trim().toUpperCase();
-      // لو كود مثل A6A102 -> نأخذ أول مقطع دلالي
       const match31 = code.match(/^([A-Z]+\d+[A-Z]?)/);
       if (match31) return match31[1];
       
-      // لو كود مثل A1-1-101 -> نأخذ A1-1
       if (code.includes('-')) {
         const parts = code.split('-');
         if (parts.length >= 2) return parts[0] + '-' + parts[1];
       }
       
-      // لو كود مثل L011C202 -> نأخذ L11 أو L011
       const matchMasyaf = code.match(/(L\d+)/);
       if (matchMasyaf) return matchMasyaf[1];
 
-      return code.substring(0, 4); // افتراضي أول 4 حروف
+      return code.substring(0, 4);
     }
 
-    // استرجاع الإحداثيات المحفوظة محلياً أو تخمينها مبدئياً
     function getUnitLocation(unitCode, projectName) {
       currentLoadedBuildingKey = extractBuildingKey(unitCode);
       const savedLocations = JSON.parse(localStorage.getItem('m2_saved_locations') || '{}');
@@ -243,33 +238,32 @@
         return savedLocations[currentLoadedBuildingKey];
       }
 
-      // إحداثيات افتراضية لو أول مرة نشوف المبنى ده
       return { x: 50, y: 50 };
     }
 
-    // دالة السحر: لما تدوس على الماستربلان، بيلقط المكان الجديد ويسجله للمبنى ده للأبد!
     function handleMapClick(event, isMasyaf) {
       if (!currentLoadedBuildingKey) {
         alert("Please search for a unit first before clicking on the map!");
         return;
       }
 
-      const rect = event.target.getBoundingClientRect();
+      const img = event.target;
+      const rect = img.getBoundingClientRect();
+      
+      // حساب الإحداثيات بالنسبة للصورة الفعلية بدقة تامة
       const x = ((event.clientX - rect.left) / rect.width) * 100;
       const y = ((event.clientY - rect.top) / rect.height) * 100;
 
       const coords = { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
 
-      // حفظ الإحداثيات في ذاكرة المتصفح للأبد
       let savedLocations = JSON.parse(localStorage.getItem('m2_saved_locations') || '{}');
       savedLocations[currentLoadedBuildingKey] = coords;
       localStorage.setItem('m2_saved_locations', JSON.stringify(savedLocations));
 
-      // تحريك الدبوس فوراً للمكان الجديد
       const marker = isMasyaf ? document.getElementById('markerMasyaf') : document.getElementById('marker');
       marker.style.left = `${coords.x}%`;
       marker.style.top = `${coords.y}%`;
-      marker.style.transform = 'translate(-50%, -50%) scale(1.1)';
+      marker.style.transform = 'translate(-50%, -50%) scale(1.2)';
 
       document.getElementById('status').style.color = "purple";
       document.getElementById('status').innerText = `✨ Saved! Building [${currentLoadedBuildingKey}] pinned permanently at (${coords.x}%, ${coords.y}%)`;
@@ -412,15 +406,20 @@
 
         const coords = getUnitLocation(val, projName);
         
-        if (projName.toLowerCase().includes('masyaf')) {
-          markerMasyaf.style.left = `${coords.x}%`;
-          markerMasyaf.style.top = `${coords.y}%`;
-          markerMasyaf.style.transform = 'translate(-50%, -50%) scale(1.1)';
-        } else {
-          marker.style.left = `${coords.x}%`;
-          marker.style.top = `${coords.y}%`;
-          marker.style.transform = 'translate(-50%, -50%) scale(1.1)';
-        }
+        // إظهار وتحريك الدبوس فوراً بناءً على الإحداثيات المحفوظة
+        setTimeout(() => {
+          if (projName.toLowerCase().includes('masyaf')) {
+            marker.style.transform = 'translate(-50%, -50%) scale(0)';
+            markerMasyaf.style.left = `${coords.x}%`;
+            markerMasyaf.style.top = `${coords.y}%`;
+            markerMasyaf.style.transform = 'translate(-50%, -50%) scale(1.2)';
+          } else {
+            markerMasyaf.style.transform = 'translate(-50%, -50%) scale(0)';
+            marker.style.left = `${coords.x}%`;
+            marker.style.top = `${coords.y}%`;
+            marker.style.transform = 'translate(-50%, -50%) scale(1.2)';
+          }
+        }, 100);
 
         st.style.color = "green";
         st.innerText = `✅ Found Unit in [${projName}] (Building: ${currentLoadedBuildingKey})`;
@@ -455,8 +454,8 @@
             .detail-card span { font-size: 14px; font-weight: 600; color: #222; }
             .masterplan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .masterplan-section { position: relative; width: 100%; flex-grow: 1; background: #e9ecef; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-            .masterplan-img { width: 100%; height: 100%; display: block; object-fit: cover; }
-            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; }
+            .masterplan-img { width: 100%; height: 100%; display: block; object-fit: contain; }
+            .unit-marker { position: absolute; width: 36px; height: 36px; background: #e63946; border: 3px solid #ffffff; border-radius: 50%; transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 15px rgba(230, 57, 70, 0.9); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 10; }
           </style>
         </head>
         <body>
@@ -497,7 +496,7 @@
         st.innerText = "✅ PDF Downloaded Successfully!";
       }).catch(err => {
         console.error(err);
-        st.style.color.red;
+        st.style.color = "red";
         st.innerText = "❌ Download failed.";
       });
     }
